@@ -20,15 +20,6 @@ def removeBackground(frame,background):
     dst = cv2.bitwise_and(frame,frame,mask=mask)
     return dst
 
-def removeBackground2(frame):
-    # Convert it to grayscale
-    gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-    # Create mask
-    
-    fgmask = fgbg.apply(gray)
-    #dst = cv2.bitwise_and(frame,frame,mask=fgmask)
-    return fgmask
-
 cam = cv2.VideoCapture(0)
 
 cv2.namedWindow("test")
@@ -53,7 +44,7 @@ while True:
         img_name = "opencv_frame_{}.png".format(img_counter)
         cv2.imwrite(img_name, frame)
         print("{} written!".format(img_name))
-        img_nobg = removeBackground2(frame)
+        img_nobg = removeBackground(frame,background)
         img_name_nobg = "opencv_frame_nobg_{}.png".format(img_counter)
         cv2.imwrite(img_name_nobg, img_nobg)
         img_counter += 1
