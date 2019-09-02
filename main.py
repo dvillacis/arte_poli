@@ -4,8 +4,12 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 import tarfile
+from datetime import datetime, timedelta
+import time
 
 from helper import DeepLabModel
+
+BG_LIST = ['P1013972','P1014053','P1014083','P1014335','P1014503','P1014572','P1014608','P1014644','P1014653','P1014654']
 
 def create_pascal_label_colormap():
   """Creates a label colormap used in PASCAL VOC segmentation benchmark.
@@ -25,29 +29,29 @@ def create_pascal_label_colormap():
 
 
 def label_to_color_image(label):
-  """Adds color defined by the dataset colormap to the label.
+    """Adds color defined by the dataset colormap to the label.
 
-  Args:
-    label: A 2D array with integer type, storing the segmentation label.
+    Args:
+        label: A 2D array with integer type, storing the segmentation label.
 
-  Returns:
-    result: A 2D array with floating type. The element of the array
-      is the color indexed by the corresponding element in the input label
-      to the PASCAL color map.
+    Returns:
+        result: A 2D array with floating type. The element of the array
+        is the color indexed by the corresponding element in the input label
+        to the PASCAL color map.
 
-  Raises:
-    ValueError: If label is not of rank 2 or its value is larger than color
-      map maximum entry.
-  """
-  if label.ndim != 2:
-    raise ValueError('Expect 2-D input label')
+    Raises:
+        ValueError: If label is not of rank 2 or its value is larger than color
+        map maximum entry.
+    """
+    if label.ndim != 2:
+        raise ValueError('Expect 2-D input label')
 
-  colormap = create_pascal_label_colormap()
+    colormap = create_pascal_label_colormap()
 
-  if np.max(label) >= len(colormap):
-    raise ValueError('label value too large.')
+    if np.max(label) >= len(colormap):
+        raise ValueError('label value too large.')
 
-  return colormap[label]
+    return colormap[label]
 
 
 LABEL_NAMES = np.asarray([
@@ -80,12 +84,31 @@ def removeBackground(frame,background):
 
 def removeBackground2(frame,model):
     # Convert it to grayscale
+    height,width,channels = frame.shape
     gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
     gray = Image.fromarray(gray)
     _,seg_map = model.run(gray)
     seg_image = label_to_color_image(seg_map).astype(np.uint8)
-    bin_seg_image = (seg_image > 127)*255
-    return cv2.bitwise_and(frame,frame,mask=bin_seg_image)
+    seg_image = cv2.cvtColor(seg_image,cv2.COLOR_BGR2GRAY)
+    seg_image = cv2.resize(seg_image,(width,height))
+    out = cv2.bitwise_and(frame,frame,mask=seg_image)
+    return out,seg_image
+
+def addBackground(img,bg,seg_image):
+    newbg = cv2.bitwise_and(bg,bg,mask=np.max(seg_image)-seg_image)
+    out = cv2.addWeighted(img,1,newbg,0.9,0)
+    return out
+
+def setCurrentBackground(bg_index,width,length):
+    idx = bg_index % len(BG_LIST)
+    newbg = cv2.imread('backgrounds/'+str(BG_LIST[idx])+'.JPG')
+    newbg = cv2.resize(newbg,(width,length))
+    return newbg
+
+def takePicture(img_counter,img):
+    img_name = "opencv_frame_nobg_{}.png".format(img_counter)
+    print("{} written!".format(img_name))
+    cv2.imwrite(img_name, img)
 
 #Parse arguments
 def parse_args():
@@ -98,13 +121,21 @@ def main(args):
     cam = cv2.VideoCapture(0)
 
     cv2.namedWindow("EPN-Photo")
-    background = cv2.imread("background.png")
     SEGMENTATION_MODEL_PATH = 'segmentation_models/deeplabv3_mnv2_pascal_train_aug_2018_01_29.tar.gz'
     MODEL = DeepLabModel(SEGMENTATION_MODEL_PATH)
+    bg_counter = 0
     img_counter = 0
+    WIDTH = int(cam.get(3))
+    HEIGHT = int(cam.get(4))
+    period = timedelta(seconds=5)
+    newbg = setCurrentBackground(bg_counter,int(cam.get(3)),int(cam.get(4)))
+    picture_flag = False
 
     while True:
         ret, frame = cam.read()
+
+        img_nobg,seg_image = removeBackground2(frame,MODEL)
+        img_nobg = addBackground(img_nobg,newbg,seg_image)
         
         if not ret:
             break
@@ -117,16 +148,30 @@ def main(args):
         elif k%256 == 32:
             # SPACE pressed
             #cv2.putText(frame,"HOLA - TOMANDO FOTO",(100,150),cv2.FONT_HERSHEY_TRIPLEX,0.9,(255,255,255))
-            img_name = "opencv_frame_{}.png".format(img_counter)
-            cv2.imwrite(img_name, frame)
-            print("{} written!".format(img_name))
-            #img_nobg = removeBackground(frame,background)
-            img_nobg = removeBackground2(frame,MODEL)
-            img_name_nobg = "opencv_frame_nobg_{}.png".format(img_counter)
-            cv2.imwrite(img_name_nobg, img_nobg)
-            img_counter += 1
+            next_time = datetime.now() + period
+            picture_flag = True
+        elif k%256 == 3:
+            bg_counter += 1
+            newbg = setCurrentBackground(bg_counter,int(cam.get(3)),int(cam.get(4)))
+        elif k%256 == 2:
+            bg_counter -= 1
+            if bg_counter < 0:
+                bg_counter = 0
+            newbg = setCurrentBackground(bg_counter,int(cam.get(3)),int(cam.get(4)))
+        elif picture_flag == True:
+            n = datetime.now()
+            if next_time >= n:
+                diff = (next_time-n).total_seconds()
+                cv2.putText(img_nobg,str(int(diff)),(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
+            else:    
+                takePicture(img_counter,img_nobg)
+                img_counter += 1
+                picture_flag = False
+                cv2.putText(img_nobg,"SONRIE",(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
+                cv2.imshow("EPN-Photo", img_nobg)
+                time.sleep(3)
 
-        cv2.imshow("EPN-Photo", frame)
+        cv2.imshow("EPN-Photo", img_nobg)
 
     cam.release()
 
