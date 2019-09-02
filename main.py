@@ -6,6 +6,7 @@ import tensorflow as tf
 import tarfile
 from datetime import datetime, timedelta
 import time
+from InstagramAPI import InstagramAPI
 
 from helper import DeepLabModel
 
@@ -106,9 +107,21 @@ def setCurrentBackground(bg_index,width,length):
     return newbg
 
 def takePicture(img_counter,img):
-    img_name = "opencv_frame_nobg_{}.png".format(img_counter)
+    img_name = "opencv_frame_nobg_{}.jpg".format(img_counter)
     print("{} written!".format(img_name))
     cv2.imwrite(img_name, img)
+    return img_name
+
+def uploadImageInstagram(img_name):
+    api = InstagramAPI("user", "pass")
+    if (api.login()):
+        api.getSelfUserFeed()  # get self user feed
+        print(api.LastJson)  # print last response JSON
+        print("Login succes!")
+        caption = "Testing"
+        api.uploadPhoto(img_name, caption=caption)
+    else:
+        print("Can't login!")
 
 #Parse arguments
 def parse_args():
@@ -151,9 +164,11 @@ def main(args):
             next_time = datetime.now() + period
             picture_flag = True
         elif k%256 == 3:
+            # RIGHT ARROW pressed - Get previous background
             bg_counter += 1
             newbg = setCurrentBackground(bg_counter,int(cam.get(3)),int(cam.get(4)))
         elif k%256 == 2:
+            # LEFT ARROW pressed - Get next background
             bg_counter -= 1
             if bg_counter < 0:
                 bg_counter = 0
@@ -164,12 +179,14 @@ def main(args):
                 diff = (next_time-n).total_seconds()
                 cv2.putText(img_nobg,str(int(diff)),(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
             else:    
-                takePicture(img_counter,img_nobg)
+                img_name = takePicture(img_counter,img_nobg)
                 img_counter += 1
                 picture_flag = False
                 cv2.putText(img_nobg,"SONRIE",(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
                 cv2.imshow("EPN-Photo", img_nobg)
                 time.sleep(3)
+                cv2.putText(img_nobg,"SUBIENDO INSTAGRAM",(WIDTH//2-200,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
+                uploadImageInstagram(img_name)
 
         cv2.imshow("EPN-Photo", img_nobg)
 
