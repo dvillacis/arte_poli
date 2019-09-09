@@ -88,7 +88,6 @@ def setCurrentBackground(bg_index,width,length,bg_path,current_bgs):
     random.seed(random.randrange(10,1000))
     newbg = cv2.imread(bg_path+'/'+current_bgs.pop(random.randrange(len(current_bgs))))
     newbg = cv2.resize(newbg,(width,length))
-    print(current_bgs)
     return newbg,current_bgs
 
 def takePicture(img_counter,img):
