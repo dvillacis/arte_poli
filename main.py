@@ -132,13 +132,17 @@ def main(args,conf):
     period = timedelta(seconds=int(conf.get('TIMER','TimerPeriod')))
     newbg,curr_bgs = setCurrentBackground(bg_counter,int(cam.get(3)),int(cam.get(4)),BACKGROUND_PATH,curr_bgs)
     picture_flag = False
+    background_flag = False
 
     while True:
         ret, frame = cam.read()
 
-        img_nobg,seg_image = removeBackground(frame,MODEL)
-        img_nobg = addBackground(img_nobg,newbg,seg_image)
-        img_nobg_2 = img_nobg
+        if background_flag:
+            img_nobg,seg_image = removeBackground(frame,MODEL)
+            img_nobg = addBackground(img_nobg,newbg,seg_image)
+            img_nobg_2 = img_nobg
+        else:
+            img_nobg = frame
         
         if not ret:
             break
@@ -148,6 +152,14 @@ def main(args,conf):
             # ESC pressed
             print("Escape hit, closing...")
             break
+        elif k%256 == 98:
+            
+            if background_flag:
+                background_flag = False
+                print("Removing background...")
+            else:
+                background_flag = True
+                print("Adding background...")
         elif k%256 == 32:
             # SPACE pressed
             next_time = datetime.now() + period
