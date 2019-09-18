@@ -133,7 +133,7 @@ def main(args,conf):
     newbg,curr_bgs = setCurrentBackground(bg_counter,int(cam.get(3)),int(cam.get(4)),BACKGROUND_PATH,curr_bgs)
     picture_flag = False
     background_flag = False
-    fullscreen_flag = False
+    #fullscreen_flag = False
 
     while True:
         ret, frame = cam.read()
@@ -148,7 +148,7 @@ def main(args,conf):
         if not ret:
             break
         k = cv2.waitKey(1)
-        print(k%256)
+
         if k%256 == 27:
             # ESC pressed
             print("Escape hit, closing...")
@@ -175,12 +175,12 @@ def main(args,conf):
             # SPACE pressed
             next_time = datetime.now() + period
             picture_flag = True
-        elif k%256 == 20:
+        elif k%256 == 9:
             # RIGHT ARROW pressed - Get previous background
             playsound('sounds/Robot_blip.mp3')
             bg_counter += 1
             newbg,curr_bgs = setCurrentBackground(bg_counter,WIDTH,HEIGHT,BACKGROUND_PATH,curr_bgs)
-        elif k%256 == 19:
+        elif k%256 == 8:
             # LEFT ARROW pressed - Get next background
             playsound('sounds/Robot_blip.mp3')
             bg_counter -= 1
