@@ -119,8 +119,8 @@ def main(args,conf):
 
     cam = cv2.VideoCapture(0)
 
-    cv2.namedWindow("EPN-Photo")
-    cv2.setWindowProperty('EPN-Photo', cv2.WND_PROP_FULLSCREEN, 1)
+    cv2.namedWindow("EPN-Photo",cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty('EPN-Photo', cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_NORMAL)
     SEGMENTATION_MODEL_PATH = conf.get('SEGMENTATION','SegmentationModelPath')
     MODEL = DeepLabModel(SEGMENTATION_MODEL_PATH)
     BACKGROUND_PATH = conf.get('BACKGROUND','backgroundPath')
