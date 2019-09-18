@@ -120,7 +120,7 @@ def main(args,conf):
     cam = cv2.VideoCapture(0)
 
     cv2.namedWindow("EPN-Photo")
-    #cv2.setWindowProperty('EPN-Photo', cv2.WND_PROP_FULLSCREEN, 1)
+    cv2.setWindowProperty('EPN-Photo', cv2.WND_PROP_FULLSCREEN, 1)
     SEGMENTATION_MODEL_PATH = conf.get('SEGMENTATION','SegmentationModelPath')
     MODEL = DeepLabModel(SEGMENTATION_MODEL_PATH)
     BACKGROUND_PATH = conf.get('BACKGROUND','backgroundPath')
@@ -133,6 +133,7 @@ def main(args,conf):
     newbg,curr_bgs = setCurrentBackground(bg_counter,int(cam.get(3)),int(cam.get(4)),BACKGROUND_PATH,curr_bgs)
     picture_flag = False
     background_flag = False
+    fullscreen_flag = False
 
     while True:
         ret, frame = cam.read()
@@ -147,29 +148,39 @@ def main(args,conf):
         if not ret:
             break
         k = cv2.waitKey(1)
-
+        print(k%256)
         if k%256 == 27:
             # ESC pressed
             print("Escape hit, closing...")
             break
         elif k%256 == 98:
-            
+            # CHANGE BACKGROUND
             if background_flag:
                 background_flag = False
                 print("Removing background...")
             else:
                 background_flag = True
                 print("Adding background...")
+        # elif k%256 == 102:
+        #     # SETUP FULLSCREEN
+        #     if fullscreen_flag:
+        #         fullscreen_flag = False
+        #         cv2.resizeWindow('Resized Window', 800, 600)
+        #         print("Disabling fullscreen...")
+        #     else:
+        #         fullscreen_flag = True
+        #         cv2.resizeWindow('Resized Window', 1920, 1080)
+        #         print("Enabling fullscreen...")
         elif k%256 == 32:
             # SPACE pressed
             next_time = datetime.now() + period
             picture_flag = True
-        elif k%256 == 3:
+        elif k%256 == 20:
             # RIGHT ARROW pressed - Get previous background
             playsound('sounds/Robot_blip.mp3')
             bg_counter += 1
             newbg,curr_bgs = setCurrentBackground(bg_counter,WIDTH,HEIGHT,BACKGROUND_PATH,curr_bgs)
-        elif k%256 == 2:
+        elif k%256 == 19:
             # LEFT ARROW pressed - Get next background
             playsound('sounds/Robot_blip.mp3')
             bg_counter -= 1
