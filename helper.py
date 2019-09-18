@@ -11,6 +11,7 @@ class DeepLabModel(object):
   OUTPUT_TENSOR_NAME = 'SemanticPredictions:0'
   INPUT_SIZE = 513
   FROZEN_GRAPH_NAME = 'frozen_inference_graph'
+  NUM_PARALLEL_EXEC_UNITS = 4
 
   def __init__(self, tarball_path):
     """Creates and loads pretrained deeplab model."""
@@ -33,7 +34,12 @@ class DeepLabModel(object):
     with self.graph.as_default():
       tf.import_graph_def(graph_def, name='')
 
-    self.sess = tf.Session(graph=self.graph)
+    config = tf.ConfigProto(intra_op_parallelism_threads=self.NUM_PARALLEL_EXEC_UNITS, 
+              inter_op_parallelism_threads=4, 
+              allow_soft_placement=True,
+              device_count = {'CPU': self.NUM_PARALLEL_EXEC_UNITS})
+
+    self.sess = tf.Session(graph=self.graph,config=config)
 
   def run(self, image):
     """Runs inference on a single image.
