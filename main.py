@@ -137,6 +137,7 @@ def main(args,conf):
 
     while True:
         ret, frame = cam.read()
+        frame = cv2.flip(frame,1)
 
         if background_flag:
             img_nobg,seg_image = removeBackground(frame,MODEL)
