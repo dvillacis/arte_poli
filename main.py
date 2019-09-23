@@ -1,4 +1,5 @@
 import argparse
+from imutils.video import FPS
 import cv2
 import numpy as np
 from PIL import Image
@@ -134,6 +135,7 @@ def main(args,conf):
     picture_flag = False
     background_flag = False
     #fullscreen_flag = False
+    fps = FPS().start()
 
     while True:
         ret, frame = cam.read()
@@ -208,7 +210,11 @@ def main(args,conf):
                     time.sleep(3)
 
         cv2.imshow("EPN-Photo", img_nobg)
+        fps.update()
 
+    fps.stop()
+    print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+    print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
     cam.release()
 
     cv2.destroyAllWindows()
