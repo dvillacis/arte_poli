@@ -1,1 +1,5 @@
 *.pyc
+*.json
+*.xml
+*.DS_Store
+*.config
