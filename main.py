@@ -11,6 +11,7 @@ from InstagramAPI import InstagramAPI
 import configparser
 from playsound import playsound
 import os, random
+import shelve
 
 from helper import DeepLabModel
 
@@ -93,7 +94,8 @@ def setCurrentBackground(bg_index,width,length,bg_path,current_bgs):
 
 def takePicture(img_counter,img):
     playsound('sounds/Camera_Click.mp3')
-    img_name = "opencv_frame_nobg_{}.jpg".format(img_counter)
+    d = datetime.now()
+    img_name = "reprogramar_epn_{}_{}.jpg".format(img_counter,d.strftime("%d_%m_%Y"))
     print("{} written!".format(img_name))
     cv2.imwrite(img_name, img)
     return img_name
@@ -104,7 +106,7 @@ def uploadImageInstagram(img_name,user,passw,caption="Testing"):
         api.getSelfUserFeed()  # get self user feed
         print(api.LastJson)  # print last response JSON
         print("Login succes!")
-        #api.uploadPhoto(img_name, caption=caption)
+        api.uploadPhoto(img_name, caption=caption)
     else:
         print("Can't login!")
 
@@ -116,7 +118,7 @@ def parse_args():
     conf.read('main.config')
     return parser.parse_args(),conf
 
-def main(args,conf):
+def main(args,conf,db):
 
     cam = cv2.VideoCapture(0)
 
@@ -127,7 +129,7 @@ def main(args,conf):
     BACKGROUND_PATH = conf.get('BACKGROUND','backgroundPath')
     curr_bgs = os.listdir(BACKGROUND_PATH)
     bg_counter = 0
-    img_counter = 0
+    img_counter = db['img_counter']
     WIDTH = int(cam.get(3))
     HEIGHT = int(cam.get(4))
     period = timedelta(seconds=int(conf.get('TIMER','TimerPeriod')))
@@ -200,6 +202,7 @@ def main(args,conf):
                 #cv2.putText(img_nobg,"SONRIE",(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
                 img_name = takePicture(img_counter,img_nobg)
                 img_counter += 1
+                db['img_counter'] = img_counter
                 picture_flag = False
                 time.sleep(3)
                 cv2.imshow("EPN-Photo", img_nobg_2)
@@ -221,7 +224,11 @@ def main(args,conf):
 
 if __name__ == '__main__':
     # Add deeplab to pythonpath
+    db = shelve.open("reprogramar_epn_db")
+    if not 'img_counter' in db:
+        db['img_counter'] = 0
+
     args,conf = parse_args()
-    main(args,conf)
+    main(args,conf,db)
 
 

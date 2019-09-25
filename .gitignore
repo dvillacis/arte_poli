@@ -3,3 +3,5 @@
 *.xml
 *.DS_Store
 *.config
+opencv_frame_*
+reprogramar_epn_*
