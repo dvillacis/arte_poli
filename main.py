@@ -122,8 +122,8 @@ def main(args,conf,db):
 
     cam = cv2.VideoCapture(0)
 
-    cv2.namedWindow("EPN-Photo",cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty('EPN-Photo', cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_NORMAL)
+    cv2.namedWindow("Reprogramar EPN",cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty('Reprogramar EPN', cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_NORMAL)
     SEGMENTATION_MODEL_PATH = conf.get('SEGMENTATION','SegmentationModelPath')
     MODEL = DeepLabModel(SEGMENTATION_MODEL_PATH)
     BACKGROUND_PATH = conf.get('BACKGROUND','backgroundPath')
@@ -137,7 +137,6 @@ def main(args,conf,db):
     picture_flag = False
     background_flag = False
     #fullscreen_flag = False
-    fps = FPS().start()
 
     while True:
         ret, frame = cam.read()
@@ -205,19 +204,14 @@ def main(args,conf,db):
                 db['img_counter'] = img_counter
                 picture_flag = False
                 time.sleep(3)
-                cv2.imshow("EPN-Photo", img_nobg_2)
+                cv2.imshow("Reprogramar EPN", img_nobg_2)
                 # INSTAGRAM UPLOAD
                 if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
-                    cv2.putText(img_nobg,"SUBIENDO INSTAGRAM",(WIDTH//2-200,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,2.0,(255,255,255),10)
+                    cv2.putText(img_nobg,"INSTAGRAM",(WIDTH//2-150,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,2.0,(255,255,255),10)
                     uploadImageInstagram(img_name,conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'),conf.get('INSTAGRAM','caption'))
                     time.sleep(3)
 
-        cv2.imshow("EPN-Photo", img_nobg)
-        fps.update()
-
-    fps.stop()
-    print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
-    print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
+        cv2.imshow("Reprogramar EPN", img_nobg)
     cam.release()
 
     cv2.destroyAllWindows()
