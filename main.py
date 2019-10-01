@@ -84,13 +84,26 @@ def addBackground(img,bg,seg_image):
     out = cv2.addWeighted(img,1,newbg,0.9,0)
     return out
 
+def initCurrentBackgrounds(path):
+    current_bgs={}
+    available_folders = list(filter(lambda x: os.path.isdir(path+'/'+x), os.listdir(path)))
+    for f in available_folders:
+        current_bgs[f] = []
+    return current_bgs
+
+def pickFolder(path):
+    available_folders = list(filter(lambda x: os.path.isdir(path+'/'+x), os.listdir(path)))
+    return random.choice(available_folders)
+
 def setCurrentBackground(bg_index,width,length,bg_path,current_bgs):
-    if len(current_bgs) == 0:
-        current_bgs = os.listdir(bg_path)
+    bg_cat = pickFolder(bg_path)
+    bg_path = bg_path+'/'+bg_cat
+    if len(current_bgs[bg_cat]) == 0:
+        current_bgs[bg_cat] = os.listdir(bg_path)
     random.seed(random.randrange(10,1000))
-    newbg = cv2.imread(bg_path+'/'+current_bgs.pop(random.randrange(len(current_bgs))))
+    newbg = cv2.imread(bg_path+'/'+current_bgs[bg_cat].pop(random.randrange(len(current_bgs[bg_cat]))))
     newbg = cv2.resize(newbg,(width,length))
-    return newbg,current_bgs
+    return newbg,bg_cat,current_bgs
 
 def takePicture(img_counter,img):
     playsound('sounds/Camera_Click.mp3')
@@ -106,7 +119,7 @@ def uploadImageInstagram(img_name,user,passw,caption="Testing"):
         api.getSelfUserFeed()  # get self user feed
         print(api.LastJson)  # print last response JSON
         print("Login succes!")
-        api.uploadPhoto(img_name, caption=caption)
+        #api.uploadPhoto(img_name, caption=caption)
     else:
         print("Can't login!")
 
@@ -126,17 +139,18 @@ def main(args,conf,db):
     cv2.setWindowProperty('Reprogramar EPN', cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_NORMAL)
     SEGMENTATION_MODEL_PATH = conf.get('SEGMENTATION','SegmentationModelPath')
     MODEL = DeepLabModel(SEGMENTATION_MODEL_PATH)
-    BACKGROUND_PATH = conf.get('BACKGROUND','backgroundPath')
-    curr_bgs = os.listdir(BACKGROUND_PATH)
+    
     bg_counter = 0
     img_counter = db['img_counter']
     WIDTH = int(cam.get(3))
     HEIGHT = int(cam.get(4))
     period = timedelta(seconds=int(conf.get('TIMER','TimerPeriod')))
-    newbg,curr_bgs = setCurrentBackground(bg_counter,int(cam.get(3)),int(cam.get(4)),BACKGROUND_PATH,curr_bgs)
+
+    BACKGROUND_PATH = conf.get('BACKGROUND','backgroundPath')
+    curr_bgs = initCurrentBackgrounds(BACKGROUND_PATH)
+    newbg,bg_cat,curr_bgs = setCurrentBackground(bg_counter,int(cam.get(3)),int(cam.get(4)),BACKGROUND_PATH,curr_bgs)
     picture_flag = False
-    background_flag = False
-    #fullscreen_flag = False
+    background_flag = True
 
     while True:
         ret, frame = cam.read()
@@ -146,18 +160,20 @@ def main(args,conf,db):
             img_nobg,seg_image = removeBackground(frame,MODEL)
             img_nobg = addBackground(img_nobg,newbg,seg_image)
             img_nobg_2 = img_nobg
+            cv2.putText(img_nobg,bg_cat.replace("_"," "),(WIDTH-len(bg_cat)*20-10,HEIGHT-20),cv2.FONT_HERSHEY_SIMPLEX,1.0,(255,255,255),2)
         else:
             img_nobg = frame
         
         if not ret:
             break
         k = cv2.waitKey(1)
+        K = k%256
 
-        if k%256 == 27:
+        if K == 27:
             # ESC pressed
             print("Escape hit, closing...")
             break
-        elif k%256 == 98:
+        elif K == 98:
             # CHANGE BACKGROUND
             if background_flag:
                 background_flag = False
@@ -165,32 +181,22 @@ def main(args,conf,db):
             else:
                 background_flag = True
                 print("Adding background...")
-        # elif k%256 == 102:
-        #     # SETUP FULLSCREEN
-        #     if fullscreen_flag:
-        #         fullscreen_flag = False
-        #         cv2.resizeWindow('Resized Window', 800, 600)
-        #         print("Disabling fullscreen...")
-        #     else:
-        #         fullscreen_flag = True
-        #         cv2.resizeWindow('Resized Window', 1920, 1080)
-        #         print("Enabling fullscreen...")
-        elif k%256 == 32:
+        elif K == 32 or K == 13:
             # SPACE pressed
             next_time = datetime.now() + period
             picture_flag = True
-        elif k%256 == 9:
+        elif K == 54:
             # RIGHT ARROW pressed - Get previous background
             playsound('sounds/Robot_blip.mp3')
             bg_counter += 1
-            newbg,curr_bgs = setCurrentBackground(bg_counter,WIDTH,HEIGHT,BACKGROUND_PATH,curr_bgs)
-        elif k%256 == 8:
+            newbg,bg_cat,curr_bgs = setCurrentBackground(bg_counter,WIDTH,HEIGHT,BACKGROUND_PATH,curr_bgs)
+        elif K == 52:
             # LEFT ARROW pressed - Get next background
             playsound('sounds/Robot_blip.mp3')
             bg_counter -= 1
             if bg_counter < 0:
                 bg_counter = 0
-            newbg,curr_bgs = setCurrentBackground(bg_counter,WIDTH,HEIGHT,BACKGROUND_PATH,curr_bgs)
+            newbg,bg_cat,curr_bgs = setCurrentBackground(bg_counter,WIDTH,HEIGHT,BACKGROUND_PATH,curr_bgs)
         elif picture_flag == True:
             n = datetime.now()
             if next_time >= n:
@@ -198,12 +204,13 @@ def main(args,conf,db):
                 diff = (next_time-n).total_seconds()
                 cv2.putText(img_nobg,str(int(diff)),(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
             else:   
+                img_nobg = img_nobg_2
+                cv2.imshow("Reprogramar EPN", img_nobg)
                 #cv2.putText(img_nobg,"SONRIE",(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
                 img_name = takePicture(img_counter,img_nobg)
                 img_counter += 1
                 db['img_counter'] = img_counter
                 picture_flag = False
-                time.sleep(3)
                 cv2.imshow("Reprogramar EPN", img_nobg_2)
                 # INSTAGRAM UPLOAD
                 if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
