@@ -168,7 +168,7 @@ def main(args,conf,db):
             break
         k = cv2.waitKey(1)
         K = k%256
-	    print(K)
+        print(K)
 
         if K == 27:
             # ESC pressed
