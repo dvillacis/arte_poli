@@ -35,7 +35,7 @@ class DeepLabModel(object):
       tf.import_graph_def(graph_def, name='')
 
     config = tf.ConfigProto(intra_op_parallelism_threads=self.NUM_PARALLEL_EXEC_UNITS, 
-              inter_op_parallelism_threads=4, 
+              inter_op_parallelism_threads=8, 
               allow_soft_placement=True,
               device_count = {'CPU': self.NUM_PARALLEL_EXEC_UNITS})
 

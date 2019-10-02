@@ -160,7 +160,7 @@ def main(args,conf,db):
             img_nobg,seg_image = removeBackground(frame,MODEL)
             img_nobg = addBackground(img_nobg,newbg,seg_image)
             img_nobg_2 = img_nobg
-            cv2.putText(img_nobg,bg_cat.replace("_"," "),(WIDTH-len(bg_cat)*20-10,HEIGHT-20),cv2.FONT_HERSHEY_SIMPLEX,1.0,(255,255,255),2)
+            cv2.putText(img_nobg,bg_cat.replace("_"," "),(WIDTH-len(bg_cat)*10-20,HEIGHT-15),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),1)
         else:
             img_nobg = frame
         
@@ -168,6 +168,7 @@ def main(args,conf,db):
             break
         k = cv2.waitKey(1)
         K = k%256
+	print(K)
 
         if K == 27:
             # ESC pressed
@@ -185,12 +186,12 @@ def main(args,conf,db):
             # SPACE pressed
             next_time = datetime.now() + period
             picture_flag = True
-        elif K == 54:
+        elif K == 54 or K == 15:
             # RIGHT ARROW pressed - Get previous background
             playsound('sounds/Robot_blip.mp3')
             bg_counter += 1
             newbg,bg_cat,curr_bgs = setCurrentBackground(bg_counter,WIDTH,HEIGHT,BACKGROUND_PATH,curr_bgs)
-        elif K == 52:
+        elif K == 52 or K == 14:
             # LEFT ARROW pressed - Get next background
             playsound('sounds/Robot_blip.mp3')
             bg_counter -= 1
