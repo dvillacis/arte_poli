@@ -119,7 +119,7 @@ def uploadImageInstagram(img_name,user,passw,caption="Testing"):
         api.getSelfUserFeed()  # get self user feed
         print(api.LastJson)  # print last response JSON
         print("Login succes!")
-        #api.uploadPhoto(img_name, caption=caption)
+        api.uploadPhoto(img_name, caption=caption)
     else:
         print("Can't login!")
 
@@ -168,7 +168,6 @@ def main(args,conf,db):
             break
         k = cv2.waitKey(1)
         K = k%256
-        print(K)
 
         if K == 27:
             # ESC pressed
@@ -200,13 +199,16 @@ def main(args,conf,db):
             newbg,bg_cat,curr_bgs = setCurrentBackground(bg_counter,WIDTH,HEIGHT,BACKGROUND_PATH,curr_bgs)
         elif picture_flag == True:
             n = datetime.now()
-            if next_time >= n:
+            if next_time > n:
                 playsound('sounds/Tick.mp3')
                 diff = (next_time-n).total_seconds()
-                cv2.putText(img_nobg,str(int(diff)),(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
+                if int(diff) == 0:
+                    cv2.putText(img_nobg,"SONRIE",(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,2.0,(255,255,255),4)
+                else:
+                    cv2.putText(img_nobg,str(int(diff)),(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
             else:   
+                print("taking picture")
                 img_nobg = img_nobg_2
-                cv2.imshow("Reprogramar EPN", img_nobg)
                 #cv2.putText(img_nobg,"SONRIE",(WIDTH//2-100,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,4.0,(255,255,255),10)
                 img_name = takePicture(img_counter,img_nobg)
                 img_counter += 1
@@ -215,9 +217,9 @@ def main(args,conf,db):
                 cv2.imshow("Reprogramar EPN", img_nobg_2)
                 # INSTAGRAM UPLOAD
                 if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
-                    cv2.putText(img_nobg,"INSTAGRAM",(WIDTH//2-150,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,2.0,(255,255,255),10)
                     uploadImageInstagram(img_name,conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'),conf.get('INSTAGRAM','caption'))
-                    time.sleep(3)
+                    cv2.putText(img_nobg,"INSTAGRAM",(WIDTH//2-180,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,2.0,(255,255,255),4)
+                    #time.sleep(3)
 
         cv2.imshow("Reprogramar EPN", img_nobg)
     cam.release()
