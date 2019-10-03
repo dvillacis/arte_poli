@@ -1,5 +1,4 @@
 import argparse
-from imutils.video import FPS
 import cv2
 import numpy as np
 from PIL import Image
@@ -12,6 +11,7 @@ import configparser
 from playsound import playsound
 import os, random
 import shelve
+import requests
 
 from helper import DeepLabModel
 
@@ -113,15 +113,17 @@ def takePicture(img_counter,img):
     cv2.imwrite(img_name, img)
     return img_name
 
-def uploadImageInstagram(img_name,user,passw,caption="Testing"):
-    api = InstagramAPI(user, passw)
-    if (api.login()):
-        api.getSelfUserFeed()  # get self user feed
-        print(api.LastJson)  # print last response JSON
-        print("Login succes!")
-        api.uploadPhoto(img_name, caption=caption)
-    else:
-        print("Can't login!")
+def uploadImageInstagram(api,img_name,caption="Testing"):
+    try:
+        if (hasattr(api,'token')):
+            api.uploadPhoto(img_name, caption=caption)
+            print("upload succeed "+img_name)
+        else:
+            print("upload failed")
+            os.rename(img_name,"pending_"+img_name)
+    except requests.exceptions.RequestException as e:
+        print(e)
+        os.rename(img_name,"pending_"+img_name)
 
 #Parse arguments
 def parse_args():
@@ -135,8 +137,19 @@ def main(args,conf,db):
 
     cam = cv2.VideoCapture(0)
 
-    cv2.namedWindow("Reprogramar EPN",cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty('Reprogramar EPN', cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_NORMAL)
+    api = InstagramAPI(conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'))
+    header = "online"
+    if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
+        try:
+            if (api.login()):
+                api.getSelfUserFeed()  # get self user feed
+                print("Login succes!")
+        except requests.exceptions.RequestException as e:
+                print("Can't login!")
+                header = "offline"
+
+    cv2.namedWindow("Objeto-Selfie-Humano ("+header+")",cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty('Objeto-Selfie-Humano ('+header+")", cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_NORMAL)
     SEGMENTATION_MODEL_PATH = conf.get('SEGMENTATION','SegmentationModelPath')
     MODEL = DeepLabModel(SEGMENTATION_MODEL_PATH)
     
@@ -160,7 +173,7 @@ def main(args,conf,db):
             img_nobg,seg_image = removeBackground(frame,MODEL)
             img_nobg = addBackground(img_nobg,newbg,seg_image)
             img_nobg_2 = img_nobg
-            cv2.putText(img_nobg,bg_cat.replace("_"," "),(WIDTH-len(bg_cat)*10-20,HEIGHT-15),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),1)
+            cv2.putText(img_nobg,bg_cat.replace("_"," "),(WIDTH-len(bg_cat)*10-60,HEIGHT-15),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),1)
         else:
             img_nobg = frame
         
@@ -214,14 +227,14 @@ def main(args,conf,db):
                 img_counter += 1
                 db['img_counter'] = img_counter
                 picture_flag = False
-                cv2.imshow("Reprogramar EPN", img_nobg_2)
+                cv2.imshow("Objeto-Selfie-Humano ("+header+")", img_nobg_2)
                 # INSTAGRAM UPLOAD
                 if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
-                    uploadImageInstagram(img_name,conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'),conf.get('INSTAGRAM','caption'))
+                    uploadImageInstagram(api,img_name,conf.get('INSTAGRAM','caption'))
                     cv2.putText(img_nobg,"INSTAGRAM",(WIDTH//2-180,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,2.0,(255,255,255),4)
                     #time.sleep(3)
 
-        cv2.imshow("Reprogramar EPN", img_nobg)
+        cv2.imshow("Objeto-Selfie-Humano ("+header+")", img_nobg)
     cam.release()
 
     cv2.destroyAllWindows()
