@@ -7,6 +7,9 @@ import tarfile
 from datetime import datetime, timedelta
 import time
 from InstagramAPI import InstagramAPI
+from TwitterAPI import TwitterAPI
+# from instapy_cli import client
+# from instagram_private_api import ClientError
 import configparser
 from playsound import playsound
 import os, random
@@ -113,27 +116,37 @@ def takePicture(img_counter,img):
     cv2.imwrite(img_name, img)
     return img_name
 
-def uploadImageInstagram(conf,img_name,caption="Testing"):
-    try:
-        api = InstagramAPI(conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'))
-        if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
-            try:
-                if (api.login()):
-                    api.getSelfUserFeed()  # get self user feed
-                    print("Login succes!")
-            except requests.exceptions.RequestException as e:
-                    print(e)
-                    print("Can't login!")
+def uploadImageTwitter(twapi,conf,img_name,caption="Testing"):
+    img = open(img_name,'rb')
+    data = img.read()
+    r = twapi.request('statuses/update_with_media', {'status':caption}, {'media[]':data})
+    print(r.status_code)
 
-        if (hasattr(api,'token')):
-            api.uploadPhoto(img_name, caption=caption)
-            print("upload succeed "+img_name)
+def uploadImageInstagram(conf,img_name,caption="Testing"):
+    api = InstagramAPI(conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'))
+    if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
+        if (api.login()):
+            api.getSelfUserFeed()  # get self user feed
+            print("Login succes!")
+            if (hasattr(api,'token')):
+                time.sleep(1)
+                api.uploadPhoto(img_name, caption=caption)
+                print("upload succeed "+img_name)
         else:
             print("upload failed")
             os.rename(img_name,"pending_"+img_name)
-    except requests.exceptions.RequestException as e:
-        print(e)
-        os.rename(img_name,"pending_"+img_name)
+
+# def uploadImageInstagram(conf,img_name,caption="Testing"):
+#     # with client(conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'), write_cookie_file=True) as cli:
+#     #     cli.upload(img_name,caption)
+#     try:
+#         with client(conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'),write_cookie_file=True) as cli:
+#             ig = cli.api()
+#             me = ig.current_user()
+#             print(me)
+#             cli.upload(img_name, caption,story=True)
+#     except ClientError as e:
+#         print(e)
 
 #Parse arguments
 def parse_args():
@@ -233,6 +246,10 @@ def main(args,conf,db):
                     uploadImageInstagram(conf,img_name,conf.get('INSTAGRAM','caption'))
                     cv2.putText(img_nobg,"INSTAGRAM",(WIDTH//2-180,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,2.0,(255,255,255),4)
                     #time.sleep(3)
+                if eval(conf.get('TWITTER','sendTwitter'))==True:
+                    twapi = TwitterAPI(consumer_key=conf.get('TWITTER','consumer_key'),consumer_secret=conf.get('TWITTER','consumer_secret'),access_token_key=conf.get('TWITTER','access_token_key'),access_token_secret=conf.get('TWITTER','access_token_secret'))
+                    uploadImageTwitter(twapi,conf,img_name,conf.get('TWITTER','caption'))
+                    cv2.putText(img_nobg,"TWITTER",(WIDTH//2-180,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,2.0,(255,255,255),4)
 
         cv2.imshow("Objeto-Selfie-Humano ("+header+")", img_nobg)
     cam.release()
