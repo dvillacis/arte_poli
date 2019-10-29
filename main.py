@@ -113,8 +113,18 @@ def takePicture(img_counter,img):
     cv2.imwrite(img_name, img)
     return img_name
 
-def uploadImageInstagram(api,img_name,caption="Testing"):
+def uploadImageInstagram(conf,img_name,caption="Testing"):
     try:
+        api = InstagramAPI(conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'))
+        if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
+            try:
+                if (api.login()):
+                    api.getSelfUserFeed()  # get self user feed
+                    print("Login succes!")
+            except requests.exceptions.RequestException as e:
+                    print(e)
+                    print("Can't login!")
+
         if (hasattr(api,'token')):
             api.uploadPhoto(img_name, caption=caption)
             print("upload succeed "+img_name)
@@ -136,17 +146,7 @@ def parse_args():
 def main(args,conf,db):
 
     cam = cv2.VideoCapture(0)
-
-    api = InstagramAPI(conf.get('INSTAGRAM','username'),conf.get('INSTAGRAM','password'))
     header = "online"
-    if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
-        try:
-            if (api.login()):
-                api.getSelfUserFeed()  # get self user feed
-                print("Login succes!")
-        except requests.exceptions.RequestException as e:
-                print("Can't login!")
-                header = "offline"
 
     cv2.namedWindow("Objeto-Selfie-Humano ("+header+")",cv2.WINDOW_NORMAL)
     cv2.setWindowProperty('Objeto-Selfie-Humano ('+header+")", cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_NORMAL)
@@ -230,7 +230,7 @@ def main(args,conf,db):
                 cv2.imshow("Objeto-Selfie-Humano ("+header+")", img_nobg_2)
                 # INSTAGRAM UPLOAD
                 if eval(conf.get('INSTAGRAM','sendInstagram'))==True:
-                    uploadImageInstagram(api,img_name,conf.get('INSTAGRAM','caption'))
+                    uploadImageInstagram(conf,img_name,conf.get('INSTAGRAM','caption'))
                     cv2.putText(img_nobg,"INSTAGRAM",(WIDTH//2-180,HEIGHT//2),cv2.FONT_HERSHEY_DUPLEX,2.0,(255,255,255),4)
                     #time.sleep(3)
 
